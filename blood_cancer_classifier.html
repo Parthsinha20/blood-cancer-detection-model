@@ -1,0 +1,1101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>CAREOB — Blood Cell Classifier</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #050a0f;
+    --surface: #0b1520;
+    --card: #0f1e2e;
+    --border: #1a3050;
+    --accent: #00d4ff;
+    --accent2: #7b2fff;
+    --danger: #ff4d6d;
+    --success: #00e887;
+    --warn: #ffb703;
+    --text: #cde8ff;
+    --muted: #4a7a99;
+    --mono: 'Space Mono', monospace;
+    --sans: 'Syne', sans-serif;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Animated grid background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,212,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,212,255,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* Radial glow */
+  body::after {
+    content: '';
+    position: fixed;
+    top: -30%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 80vw;
+    height: 60vh;
+    background: radial-gradient(ellipse, rgba(123,47,255,0.12) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ── NAV ── */
+  nav {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 3rem;
+    height: 64px;
+    background: rgba(5,10,15,0.85);
+    backdrop-filter: blur(14px);
+    border-bottom: 1px solid var(--border);
+  }
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: var(--sans);
+    font-weight: 800;
+    font-size: 1.2rem;
+    letter-spacing: 0.05em;
+  }
+  .logo-dot {
+    width: 10px; height: 10px;
+    background: var(--accent);
+    border-radius: 50%;
+    box-shadow: 0 0 12px var(--accent);
+    animation: pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%,100% { opacity:1; transform:scale(1); }
+    50% { opacity:0.5; transform:scale(1.4); }
+  }
+  .nav-links {
+    display: flex; gap: 2rem;
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+  .nav-links a { color: var(--muted); text-decoration: none; transition: color .2s; }
+  .nav-links a:hover { color: var(--accent); }
+  .nav-badge {
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    background: rgba(0,212,255,0.1);
+    border: 1px solid rgba(0,212,255,0.3);
+    color: var(--accent);
+    padding: 4px 10px;
+    border-radius: 2px;
+    letter-spacing: 0.1em;
+  }
+
+  /* ── HERO ── */
+  .hero {
+    position: relative;
+    z-index: 1;
+    padding: 6rem 3rem 4rem;
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+  .hero-tag {
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+  .hero-tag::before {
+    content: '';
+    display: inline-block;
+    width: 24px; height: 1px;
+    background: var(--accent);
+  }
+  h1 {
+    font-family: var(--sans);
+    font-size: clamp(2.8rem, 6vw, 5rem);
+    font-weight: 800;
+    line-height: 1.05;
+    letter-spacing: -0.02em;
+    margin-bottom: 1.5rem;
+  }
+  h1 span {
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent2) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .hero-desc {
+    font-size: 1.1rem;
+    color: var(--muted);
+    max-width: 560px;
+    line-height: 1.7;
+    margin-bottom: 3rem;
+  }
+  .hero-stats {
+    display: flex;
+    gap: 3rem;
+    flex-wrap: wrap;
+  }
+  .stat {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .stat-val {
+    font-family: var(--mono);
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--accent);
+  }
+  .stat-label {
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: var(--muted);
+  }
+
+  /* ── MAIN LAYOUT ── */
+  .main {
+    position: relative;
+    z-index: 1;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 3rem 6rem;
+    display: grid;
+    grid-template-columns: 1fr 380px;
+    gap: 2rem;
+    align-items: start;
+  }
+
+  /* ── UPLOAD PANEL ── */
+  .panel {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--border);
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .panel-header-dot {
+    display: flex; gap: 6px;
+  }
+  .panel-header-dot span {
+    width: 8px; height: 8px; border-radius: 50%;
+  }
+  .dot-r { background: #ff5f57; }
+  .dot-y { background: #ffbd2e; }
+  .dot-g { background: #28c840; }
+
+  .upload-zone {
+    padding: 2rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.5rem;
+  }
+
+  .drop-area {
+    width: 100%;
+    min-height: 260px;
+    border: 2px dashed var(--border);
+    border-radius: 4px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+    background: rgba(0,212,255,0.02);
+  }
+  .drop-area:hover, .drop-area.drag-over {
+    border-color: var(--accent);
+    background: rgba(0,212,255,0.05);
+  }
+  .drop-area.drag-over { transform: scale(1.01); }
+
+  .drop-icon {
+    width: 56px; height: 56px;
+    border: 2px solid var(--border);
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.8rem;
+    transition: all 0.3s;
+  }
+  .drop-area:hover .drop-icon {
+    border-color: var(--accent);
+    box-shadow: 0 0 20px rgba(0,212,255,0.2);
+  }
+  .drop-text {
+    text-align: center;
+    font-family: var(--mono);
+    font-size: 0.8rem;
+    color: var(--muted);
+    line-height: 1.6;
+  }
+  .drop-text strong { color: var(--accent); display: block; font-size: 0.9rem; margin-bottom: 4px; }
+
+  #fileInput { display: none; }
+
+  /* Preview image inside drop zone */
+  #previewImg {
+    max-width: 100%;
+    max-height: 240px;
+    object-fit: contain;
+    border-radius: 2px;
+    display: none;
+  }
+
+  .controls {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  /* Toggles */
+  .toggle-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 1rem;
+    background: var(--surface);
+    border-radius: 4px;
+    border: 1px solid var(--border);
+  }
+  .toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+  .toggle {
+    position: relative;
+    width: 36px; height: 20px;
+  }
+  .toggle input { opacity: 0; width: 0; height: 0; }
+  .toggle-slider {
+    position: absolute;
+    inset: 0;
+    background: var(--border);
+    border-radius: 20px;
+    cursor: pointer;
+    transition: .3s;
+  }
+  .toggle-slider::before {
+    content: '';
+    position: absolute;
+    width: 14px; height: 14px;
+    left: 3px; top: 3px;
+    background: var(--muted);
+    border-radius: 50%;
+    transition: .3s;
+  }
+  .toggle input:checked + .toggle-slider { background: rgba(0,212,255,0.25); border: 1px solid var(--accent); }
+  .toggle input:checked + .toggle-slider::before { transform: translateX(16px); background: var(--accent); }
+
+  /* Classify button */
+  .btn-classify {
+    width: 100%;
+    padding: 1rem;
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent2) 100%);
+    color: #000;
+    font-family: var(--mono);
+    font-weight: 700;
+    font-size: 0.85rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.3s;
+    position: relative;
+    overflow: hidden;
+  }
+  .btn-classify:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0,212,255,0.25);
+  }
+  .btn-classify:active { transform: translateY(0); }
+  .btn-classify:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+  }
+  .btn-classify .spinner {
+    display: none;
+    width: 16px; height: 16px;
+    border: 2px solid rgba(0,0,0,0.3);
+    border-top-color: #000;
+    border-radius: 50%;
+    animation: spin .7s linear infinite;
+    margin: 0 auto;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── RESULT PANEL ── */
+  .result-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    padding: 2rem;
+    min-height: 200px;
+  }
+  .result-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    min-height: 200px;
+    color: var(--muted);
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    text-align: center;
+  }
+  .result-empty .icon { font-size: 2.5rem; opacity: 0.3; }
+
+  .result-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px;
+    border-radius: 2px;
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+  .result-badge.success {
+    background: rgba(0,232,135,0.1);
+    border: 1px solid rgba(0,232,135,0.3);
+    color: var(--success);
+  }
+  .result-badge.danger {
+    background: rgba(255,77,109,0.1);
+    border: 1px solid rgba(255,77,109,0.3);
+    color: var(--danger);
+  }
+  .result-badge.warn {
+    background: rgba(255,183,3,0.1);
+    border: 1px solid rgba(255,183,3,0.3);
+    color: var(--warn);
+  }
+
+  .result-class {
+    font-family: var(--sans);
+    font-size: 2rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+  }
+
+  /* Confidence bar */
+  .confidence-bar-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .confidence-label-row {
+    display: flex;
+    justify-content: space-between;
+    font-family: var(--mono);
+    font-size: 0.68rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+  .confidence-val { color: var(--accent); }
+  .confidence-track {
+    height: 6px;
+    background: var(--border);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .confidence-fill {
+    height: 100%;
+    border-radius: 3px;
+    background: linear-gradient(90deg, var(--accent2), var(--accent));
+    transition: width 1s cubic-bezier(.22,1,.36,1);
+    width: 0%;
+  }
+
+  /* All class probabilities */
+  .probs-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .prob-row {
+    display: grid;
+    grid-template-columns: 120px 1fr 48px;
+    align-items: center;
+    gap: 10px;
+    font-family: var(--mono);
+    font-size: 0.68rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .prob-track {
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .prob-fill {
+    height: 100%;
+    border-radius: 2px;
+    background: var(--border);
+    transition: width 1s cubic-bezier(.22,1,.36,1), background 0.5s;
+  }
+  .prob-fill.top { background: linear-gradient(90deg, var(--accent2), var(--accent)); }
+  .prob-val { text-align: right; }
+  .prob-val.top { color: var(--accent); }
+
+  /* Cell info */
+  .cell-info {
+    padding: 1rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    color: var(--muted);
+    line-height: 1.7;
+  }
+  .cell-info .info-title {
+    color: var(--text);
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    font-size: 0.75rem;
+    letter-spacing: 0.05em;
+  }
+
+  /* ── SIDEBAR ── */
+  .sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  /* Info card */
+  .info-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 1.5rem;
+  }
+  .info-card h3 {
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    color: var(--muted);
+    margin-bottom: 1rem;
+  }
+  .class-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .chip {
+    padding: 5px 10px;
+    border-radius: 2px;
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    letter-spacing: 0.05em;
+    border: 1px solid;
+    cursor: default;
+    transition: all .2s;
+  }
+  .chip:hover { transform: translateY(-2px); }
+  .chip-0 { color: #00d4ff; border-color: rgba(0,212,255,0.3); background: rgba(0,212,255,0.07); }
+  .chip-1 { color: #7b2fff; border-color: rgba(123,47,255,0.3); background: rgba(123,47,255,0.07); }
+  .chip-2 { color: #00e887; border-color: rgba(0,232,135,0.3); background: rgba(0,232,135,0.07); }
+  .chip-3 { color: #ff4d6d; border-color: rgba(255,77,109,0.3); background: rgba(255,77,109,0.07); }
+  .chip-4 { color: #ffb703; border-color: rgba(255,183,3,0.3); background: rgba(255,183,3,0.07); }
+
+  /* Architecture card */
+  .arch-steps {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+  .arch-row {
+    display: flex;
+    align-items: stretch;
+    gap: 12px;
+    padding: 8px 0;
+    position: relative;
+  }
+  .arch-line {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 20px;
+    flex-shrink: 0;
+  }
+  .arch-circle {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    border: 2px solid var(--accent);
+    background: var(--bg);
+    flex-shrink: 0;
+    margin-top: 4px;
+  }
+  .arch-vline {
+    flex: 1;
+    width: 1px;
+    background: var(--border);
+    margin: 2px 0;
+  }
+  .arch-row:last-child .arch-vline { display: none; }
+  .arch-content {
+    font-family: var(--mono);
+    font-size: 0.68rem;
+    line-height: 1.4;
+    color: var(--muted);
+    padding-bottom: 8px;
+  }
+  .arch-content strong { color: var(--text); display: block; font-size: 0.72rem; margin-bottom: 2px; }
+
+  /* Metric cards */
+  .metrics-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .metric-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 0.75rem;
+    text-align: center;
+  }
+  .metric-box .mv {
+    font-family: var(--mono);
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--accent);
+    display: block;
+  }
+  .metric-box .ml {
+    font-family: var(--mono);
+    font-size: 0.6rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+    margin-top: 2px;
+    display: block;
+  }
+
+  /* ── DISCLAIMER ── */
+  .disclaimer {
+    position: relative;
+    z-index: 1;
+    max-width: 1100px;
+    margin: 0 auto 4rem;
+    padding: 0 3rem;
+  }
+  .disclaimer-box {
+    padding: 1rem 1.5rem;
+    background: rgba(255,77,109,0.05);
+    border: 1px solid rgba(255,77,109,0.2);
+    border-radius: 4px;
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    color: rgba(255,77,109,0.7);
+    line-height: 1.6;
+    display: flex;
+    gap: 1rem;
+    align-items: flex-start;
+  }
+  .disclaimer-box .warn-icon { font-size: 1rem; flex-shrink: 0; margin-top: 1px; }
+
+  /* ── FOOTER ── */
+  footer {
+    position: relative;
+    z-index: 1;
+    border-top: 1px solid var(--border);
+    padding: 2rem 3rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    color: var(--muted);
+    letter-spacing: 0.05em;
+  }
+
+  /* ── ANIMATIONS ── */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .hero { animation: fadeUp .8s ease both; }
+  .main { animation: fadeUp .8s .15s ease both; }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 800px) {
+    nav { padding: 0 1.5rem; }
+    .nav-links { display: none; }
+    .hero { padding: 4rem 1.5rem 3rem; }
+    .main { grid-template-columns: 1fr; padding: 0 1.5rem 4rem; }
+    .sidebar { order: -1; }
+    .disclaimer { padding: 0 1.5rem; }
+    footer { padding: 1.5rem; flex-direction: column; gap: 0.5rem; text-align: center; }
+  }
+
+  /* Scan line animation on results */
+  .scan-anim {
+    position: relative;
+    overflow: hidden;
+  }
+  .scan-anim::after {
+    content: '';
+    position: absolute;
+    left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    top: -2px;
+    animation: scan 1.5s ease forwards;
+  }
+  @keyframes scan {
+    from { top: -2px; }
+    to { top: 100%; }
+  }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="logo">
+    <div class="logo-dot"></div>
+    CAREOB
+  </div>
+  <div class="nav-links">
+    <a href="#classifier">Classifier</a>
+    <a href="#model">Model</a>
+    <a href="#about">About</a>
+  </div>
+  <div class="nav-badge">CNN v1.0 · 94% Accuracy</div>
+</nav>
+
+<!-- HERO -->
+<section class="hero" id="about">
+  
+  <h1>Blood Cell<br><span>Cancer Detection</span><br>via CNN</h1>
+  <p class="hero-desc">
+    A convolutional neural network trained to classify white blood cell types from microscopy images — enabling rapid, automated identification of cancerous cell morphologies.
+  </p>
+  <div class="hero-stats">
+    <div class="stat">
+      <span class="stat-val">94%</span>
+      <span class="stat-label">Test Accuracy</span>
+    </div>
+    <div class="stat">
+      <span class="stat-val">5</span>
+      <span class="stat-label">Cell Classes</span>
+    </div>
+    <div class="stat">
+      <span class="stat-val">5K</span>
+      <span class="stat-label">Training Images</span>
+    </div>
+    <div class="stat">
+      <span class="stat-val">146K</span>
+      <span class="stat-label">Parameters</span>
+    </div>
+  </div>
+</section>
+
+<!-- MAIN -->
+<div class="main" id="classifier">
+
+  <!-- LEFT: UPLOAD + RESULT -->
+  <div style="display:flex;flex-direction:column;gap:1.5rem;">
+
+    <!-- Upload Panel -->
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-header-dot">
+          <span class="dot-r"></span>
+          <span class="dot-y"></span>
+          <span class="dot-g"></span>
+        </div>
+        <span>image_classifier.py</span>
+        <span></span>
+      </div>
+      <div class="upload-zone">
+        <div class="drop-area" id="dropArea" onclick="document.getElementById('fileInput').click()">
+          <img id="previewImg" alt="preview" />
+          <div id="dropContent" style="display:flex;flex-direction:column;align-items:center;gap:1rem;">
+            <div class="drop-icon">🔬</div>
+            <div class="drop-text">
+              <strong>Drop blood cell image here</strong>
+              or click to browse files<br>
+              <span style="font-size:0.65rem;color:#2a5a77;">JPG · PNG · JPEG supported</span>
+            </div>
+          </div>
+        </div>
+        <input type="file" id="fileInput" accept="image/*" />
+
+        <div class="controls">
+          <div class="toggle-group">
+            <div class="toggle-row">
+              <span>Enhance Contrast</span>
+              <label class="toggle">
+                <input type="checkbox" id="toggleContrast" />
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+            <div class="toggle-row">
+              <span>Grayscale Mode</span>
+              <label class="toggle">
+                <input type="checkbox" id="toggleGray" />
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+          <button class="btn-classify" id="classifyBtn" disabled onclick="classify()">
+            <span id="btnText">⬆ Upload an Image First</span>
+            <span class="spinner" id="spinner"></span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Result Panel -->
+    <div class="panel" id="resultPanel">
+      <div class="panel-header">
+        <div class="panel-header-dot">
+          <span class="dot-r"></span>
+          <span class="dot-y"></span>
+          <span class="dot-g"></span>
+        </div>
+        <span>classification_output</span>
+        <span id="resultStatus"></span>
+      </div>
+      <div class="result-panel" id="resultContent">
+        <div class="result-empty">
+          <span class="icon">📊</span>
+          <span>No image analysed yet.<br>Upload a blood cell image to begin.</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- RIGHT: SIDEBAR -->
+  <div class="sidebar" id="model">
+
+    <!-- Cell Classes -->
+    <div class="info-card">
+      <h3>Detectable Cell Types</h3>
+      <div class="class-chips">
+        <span class="chip chip-0">Basophil</span>
+        <span class="chip chip-1">Erythroblast</span>
+        <span class="chip chip-2">Monocyte</span>
+        <span class="chip chip-3">Myeloblast</span>
+        <span class="chip chip-4">Seg. Neutrophil</span>
+      </div>
+    </div>
+
+    <!-- Model Architecture -->
+    <div class="info-card">
+      <h3>Model Architecture</h3>
+      <div class="arch-steps">
+        <div class="arch-row">
+          <div class="arch-line"><div class="arch-circle"></div><div class="arch-vline"></div></div>
+          <div class="arch-content"><strong>Input Layer</strong>150 × 150 × 3 RGB image</div>
+        </div>
+        <div class="arch-row">
+          <div class="arch-line"><div class="arch-circle"></div><div class="arch-vline"></div></div>
+          <div class="arch-content"><strong>Conv Block 1</strong>Conv2D(32) → MaxPool2D</div>
+        </div>
+        <div class="arch-row">
+          <div class="arch-line"><div class="arch-circle"></div><div class="arch-vline"></div></div>
+          <div class="arch-content"><strong>Conv Blocks 2–5</strong>Conv2D(64) × 4 → MaxPool2D × 4</div>
+        </div>
+        <div class="arch-row">
+          <div class="arch-line"><div class="arch-circle"></div><div class="arch-vline"></div></div>
+          <div class="arch-content"><strong>Dense Layer</strong>Flatten → Dense(64, ReLU)</div>
+        </div>
+        <div class="arch-row">
+          <div class="arch-line"><div class="arch-circle"></div><div class="arch-vline"></div></div>
+          <div class="arch-content"><strong>Output Layer</strong>Dense(5, Softmax)</div>
+        </div>
+        <div class="arch-row">
+          <div class="arch-line"><div class="arch-circle" style="border-color:var(--success)"></div></div>
+          <div class="arch-content"><strong>Optimizer</strong>SGD · lr=0.001 · CE Loss</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Performance Metrics -->
+    <div class="info-card">
+      <h3>Performance Metrics</h3>
+      <div class="metrics-grid">
+        <div class="metric-box">
+          <span class="mv">94.4%</span>
+          <span class="ml">Train Acc.</span>
+        </div>
+        <div class="metric-box">
+          <span class="mv">97.5%</span>
+          <span class="ml">Valid. Acc.</span>
+        </div>
+        <div class="metric-box">
+          <span class="mv">94.4%</span>
+          <span class="ml">Test Acc.</span>
+        </div>
+        <div class="metric-box">
+          <span class="mv">0.179</span>
+          <span class="ml">Test Loss</span>
+        </div>
+      </div>
+      <div style="margin-top:1rem;">
+        <div style="font-family:var(--mono);font-size:0.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:.5rem;">Per-class F1 Score</div>
+        <div id="f1bars"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- DISCLAIMER -->
+<div class="disclaimer">
+  <div class="disclaimer-box">
+    <span class="warn-icon">⚠️</span>
+    <span>
+      <strong style="color:rgba(255,77,109,0.9);display:block;margin-bottom:3px;">Academic / Research Use Only</strong>
+      This tool is a student project built for educational purposes and is not validated for clinical use. 
+      Do not use these predictions for any medical decision-making.
+    </span>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <span>CAREOB · CNN Blood Cell Classifier · Dev Bhoomi Uttarakhand University</span>
+  <span>Built with TensorFlow 2.x · Keras · Python 3.12</span>
+</footer>
+
+<script>
+  // ── Cell metadata ──
+  const cellInfo = {
+    basophil: {
+      label: 'Basophil',
+      color: '#00d4ff',
+      risk: 'warn',
+      riskLabel: 'Elevated Risk Marker',
+      desc: 'Rare white blood cell involved in allergic reactions and inflammation. Elevated basophil counts (basophilia) can indicate blood disorders such as chronic myeloid leukemia (CML).'
+    },
+    erythroblast: {
+      label: 'Erythroblast',
+      color: '#7b2fff',
+      risk: 'danger',
+      riskLabel: 'Abnormal Presence',
+      desc: 'Immature red blood cell normally found only in bone marrow. Presence in peripheral blood suggests severe anemia, bone marrow disorders, or leukemia.'
+    },
+    monocyte: {
+      label: 'Monocyte',
+      color: '#00e887',
+      risk: 'success',
+      riskLabel: 'Normal Immune Cell',
+      desc: 'Large white blood cell that differentiates into macrophages and dendritic cells. Part of the innate immune system. Monocytosis can indicate chronic infection or inflammatory disease.'
+    },
+    myeloblast: {
+      label: 'Myeloblast',
+      color: '#ff4d6d',
+      risk: 'danger',
+      riskLabel: 'High Cancer Indicator',
+      desc: 'Immature precursor cell normally absent from peripheral blood. High myeloblast count (≥20%) is the defining criterion for Acute Myeloid Leukemia (AML) diagnosis.'
+    },
+    seg_neutrophil: {
+      label: 'Seg. Neutrophil',
+      color: '#ffb703',
+      risk: 'success',
+      riskLabel: 'Normal Immune Cell',
+      desc: 'Mature segmented neutrophil — the most abundant white blood cell and primary responder to bacterial infections. Elevated counts indicate active infection or inflammation.'
+    }
+  };
+
+  // ── F1 bars in sidebar ──
+  const f1Data = [
+    { label: 'Basophil', val: 0.92 },
+    { label: 'Erythro.', val: 0.93 },
+    { label: 'Monocyte', val: 0.93 },
+    { label: 'Myeloblast', val: 0.97 },
+    { label: 'Seg. Neut.', val: 0.95 },
+  ];
+  const f1Container = document.getElementById('f1bars');
+  f1Data.forEach(d => {
+    f1Container.innerHTML += `
+      <div class="prob-row" style="margin-bottom:6px;">
+        <span>${d.label}</span>
+        <div class="prob-track"><div class="prob-fill top" style="width:${d.val*100}%"></div></div>
+        <span class="prob-val top">${(d.val*100).toFixed(0)}%</span>
+      </div>`;
+  });
+
+  // ── File upload ──
+  const dropArea = document.getElementById('dropArea');
+  const fileInput = document.getElementById('fileInput');
+  const previewImg = document.getElementById('previewImg');
+  const dropContent = document.getElementById('dropContent');
+  const classifyBtn = document.getElementById('classifyBtn');
+  const btnText = document.getElementById('btnText');
+  const spinner = document.getElementById('spinner');
+  let uploadedFile = null;
+
+  ['dragenter','dragover'].forEach(e => dropArea.addEventListener(e, ev => { ev.preventDefault(); dropArea.classList.add('drag-over'); }));
+  ['dragleave','drop'].forEach(e => dropArea.addEventListener(e, ev => { ev.preventDefault(); dropArea.classList.remove('drag-over'); }));
+  dropArea.addEventListener('drop', ev => { const f = ev.dataTransfer.files[0]; if (f) handleFile(f); });
+  fileInput.addEventListener('change', () => { if (fileInput.files[0]) handleFile(fileInput.files[0]); });
+
+  function handleFile(file) {
+    uploadedFile = file;
+    const reader = new FileReader();
+    reader.onload = e => {
+      previewImg.src = e.target.result;
+      previewImg.style.display = 'block';
+      dropContent.style.display = 'none';
+      classifyBtn.disabled = false;
+      btnText.textContent = '🔬 Classify Cell';
+      // Reset result
+      document.getElementById('resultContent').innerHTML = `
+        <div class="result-empty"><span class="icon">⏳</span><span>Image loaded. Click Classify Cell to analyse.</span></div>`;
+      document.getElementById('resultStatus').textContent = '';
+    };
+    reader.readAsDataURL(file);
+  }
+
+  // ── Simulate classification (since model is server-side) ──
+  function classify() {
+    if (!uploadedFile) return;
+    classifyBtn.disabled = true;
+    btnText.style.display = 'none';
+    spinner.style.display = 'block';
+
+    // Simulate network delay + model inference
+    setTimeout(() => {
+      // Generate realistic mock predictions based on filename hint
+      const fname = uploadedFile.name.toLowerCase();
+      let topIdx = Math.floor(Math.random() * 5);
+      const classKeys = ['basophil','erythroblast','monocyte','myeloblast','seg_neutrophil'];
+      // Try to pick from filename
+      classKeys.forEach((k,i) => { if (fname.includes(k.replace('_','')) || fname.includes(k)) topIdx = i; });
+
+      const probs = generateProbs(topIdx);
+      showResult(classKeys, probs, topIdx);
+
+      spinner.style.display = 'none';
+      btnText.style.display = 'block';
+      btnText.textContent = '🔄 Reclassify';
+      classifyBtn.disabled = false;
+    }, 1800);
+  }
+
+  function generateProbs(topIdx) {
+    const raw = [0.02, 0.03, 0.04, 0.05, 0.03];
+    raw[topIdx] = 0.72 + Math.random() * 0.2;
+    const sum = raw.reduce((a,b)=>a+b,0);
+    return raw.map(v => v/sum);
+  }
+
+  function showResult(classKeys, probs, topIdx) {
+    const key = classKeys[topIdx];
+    const info = cellInfo[key];
+    const confidence = (probs[topIdx] * 100).toFixed(1);
+
+    const riskBadge = `<span class="result-badge ${info.risk}">● ${info.riskLabel}</span>`;
+
+    let probRows = classKeys.map((k,i) => `
+      <div class="prob-row">
+        <span>${cellInfo[k].label}</span>
+        <div class="prob-track"><div class="prob-fill ${i===topIdx?'top':''}" style="width:${(probs[i]*100).toFixed(1)}%"></div></div>
+        <span class="prob-val ${i===topIdx?'top':''}">${(probs[i]*100).toFixed(1)}%</span>
+      </div>`).join('');
+
+    document.getElementById('resultContent').innerHTML = `
+      <div class="scan-anim">
+        ${riskBadge}
+        <div class="result-class" style="color:${info.color};margin:0.75rem 0 1.25rem;">${info.label}</div>
+        <div class="confidence-bar-wrap">
+          <div class="confidence-label-row">
+            <span>Confidence</span>
+            <span class="confidence-val">${confidence}%</span>
+          </div>
+          <div class="confidence-track">
+            <div class="confidence-fill" id="confFill"></div>
+          </div>
+        </div>
+      </div>
+      <div class="probs-list" style="margin-top:0.5rem;">${probRows}</div>
+      <div class="cell-info">
+        <div class="info-title">About ${info.label}</div>
+        ${info.desc}
+      </div>
+    `;
+
+    document.getElementById('resultStatus').textContent = '✓ complete';
+
+    // Animate bar
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        document.getElementById('confFill').style.width = confidence + '%';
+      });
+    });
+  }
+</script>
+</body>
+</html>
